@@ -22,11 +22,10 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # Carica variabili d'ambiente (API Key)
 load_dotenv()
 
-GOOGLE_API_KEY = "AIzaSyCC8mJJumgCze6kv_uDX9VyJkn7yJtOg1A" 
-#GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-
+# Prendi l'API key da Render o dal file .env
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 if not GOOGLE_API_KEY:
-    logging.error("GOOGLE_API_KEY non trovata nel file .env o nelle variabili d'ambiente.")
+    logging.error("GOOGLE_API_KEY non trovata nelle variabili d'ambiente.")
     exit(1)
 
 # Configura l'API di Google Gemini
@@ -266,10 +265,11 @@ async def root():
 
 # --- Esecuzione dell'Applicazione ---
 if __name__ == "__main__":
-    print("Avvio del server FastAPI...")
+    port = int(os.getenv("PORT", 8000))
+    print(f"Avvio del server FastAPI sulla porta {port}...")
     print("Vai su http://127.0.0.1:8000 per l'endpoint root.")
     print("Vai su http://127.0.0.1:8000/docs per la documentazione API interattiva (Swagger UI).")
     # Esegui il server Uvicorn
-    run(app, host="0.0.0.0", port=8000)
+    run(app, host="0.0.0.0", port=port)
     # Usare host="0.0.0.0" rende l'API accessibile da altre macchine nella stessa rete.
     # Usa host="127.0.0.1" per renderla accessibile solo localmente.
