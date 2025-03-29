@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>🐕 ChatBot Amico Cane</title>
     <style>
         :root {
@@ -10,73 +10,104 @@
             --secondary-color: #4ECDC4;
             --background-color: #F7F7F7;
             --chat-bg: #FFFFFF;
+            --text-dark: #333333;
+        }
+
+        * {
+            box-sizing: border-box;
         }
 
         body {
-            font-family: 'Comic Sans MS', cursive, sans-serif;
+            font-family: 'Arial', sans-serif;
             margin: 0;
-            padding: 20px;
+            padding: 10px;
             background-color: var(--background-color);
             background-image: url('https://www.transparenttextures.com/patterns/paw-prints.png');
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
 
         .container {
-            max-width: 800px;
+            max-width: 100%;
             margin: 0 auto;
             background-color: var(--chat-bg);
-            border-radius: 20px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
-            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
         }
 
         .header {
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
+            padding: 5px;
         }
 
         .header h1 {
             color: var(--primary-color);
-            font-size: 2.5em;
+            font-size: 1.8rem;
             margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .header h1 img {
+            width: 40px; 
+            height: 50px;
+            margin: 0 5px;
         }
 
         .header p {
-            color: #666;
-            margin: 10px 0;
+            color: var(--text-dark);
+            margin: 5px 0;
+            font-size: 0.9rem;
         }
 
         .chat-container {
-            height: 400px;
+            flex: 1;
             overflow-y: auto;
-            padding: 20px;
+            padding: 10px;
             border: 2px solid var(--secondary-color);
             border-radius: 15px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
 
         .message {
-            margin-bottom: 15px;
-            padding: 10px 15px;
+            margin-bottom: 12px;
+            padding: 10px;
             border-radius: 15px;
-            max-width: 80%;
+            max-width: 85%;
             position: relative;
+            word-wrap: break-word;
         }
 
         .user-message {
             background-color: var(--primary-color);
             color: white;
             margin-left: auto;
+            font-size: 1rem;
         }
 
         .bot-message {
             background-color: var(--secondary-color);
             color: white;
-            font-size: 20px;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .bot-message span {
+            flex: 1;
         }
 
         .input-container {
             display: flex;
             gap: 10px;
+            margin-top: auto;
         }
 
         input[type="text"] {
@@ -84,7 +115,7 @@
             padding: 12px;
             border: 2px solid var(--secondary-color);
             border-radius: 25px;
-            font-size: 16px;
+            font-size: 1rem;
             outline: none;
         }
 
@@ -93,26 +124,22 @@
             color: white;
             border: none;
             border-radius: 25px;
-            padding: 12px 25px;
+            padding: 12px 20px;
             cursor: pointer;
-            font-size: 16px;
-            transition: transform 0.2s;
-        }
-
-        button:hover {
-            transform: scale(1.05);
+            font-size: 1rem;
+            white-space: nowrap;
         }
 
         .loading {
             display: none;
             text-align: center;
-            margin: 10px 0;
+            margin: 8px 0;
         }
 
         .loading span {
             display: inline-block;
-            width: 10px;
-            height: 10px;
+            width: 8px;
+            height: 8px;
             background-color: var(--primary-color);
             border-radius: 50%;
             margin: 0 3px;
@@ -124,30 +151,64 @@
 
         @keyframes bounce {
             0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
+            50% { transform: translateY(-5px); }
         }
 
         .dog-avatar {
-            width: 40px;
-            height: 40px;
+            min-width: 30px;
+            height: 30px;
             background-image: url('https://cdn-icons-png.flaticon.com/512/620/620851.png');
             background-size: contain;
             background-repeat: no-repeat;
-            margin-right: 10px;
+            margin-right: 8px;
+        }
+
+        /* Media queries per la responsività */
+        @media screen and (min-width: 768px) {
+            .container {
+                max-width: 800px;
+                padding: 20px;
+            }
+
+            .header h1 {
+                font-size: 2.2rem;
+            }
+
+            .header h1 img {
+                width: 50px;
+                height: 80px;
+            }
+
+            .header p {
+                font-size: 1rem;
+            }
+
+            .bot-message {
+                font-size: 1.2rem;
+            }
+
+            .user-message {
+                font-size: 1.1rem;
+            }
+
+            .dog-avatar {
+                min-width: 40px;
+                height: 40px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1><img src="/static/mia.png" alt="Cagnolina Mia" style="width: 50px; height: 80px;">ChatBot con la cagnolina Mia<img src="/static/mia.png" alt="Cagnolina Mia" style="width: 50px; height: 80px;"></h1>
+            <h1><img src="/static/mia.png" alt="Cagnolina Mia">ChatBot con Mia<img src="/static/mia.png" alt="Cagnolina Mia"></h1>
             <p>Fammi una domanda e ti risponderò da cane!</p>
         </div>
         
         <div class="chat-container" id="chatContainer">
             <div class="message bot-message">
                 <div class="dog-avatar"></div>
-                Ciao! Sono Mia! Come posso aiutarti oggi? 🐾
+                <span>Ciao! Sono Mia! Come posso aiutarti oggi? 🐾</span>
             </div>
         </div>
 
@@ -158,7 +219,7 @@
         </div>
 
         <div class="input-container">
-            <input type="text" id="userInput" placeholder="Scrivi la tua domanda qui...">
+            <input type="text" id="userInput" placeholder="Scrivi qui...">
             <button onclick="sendMessage()">Invia</button>
         </div>
     </div>
@@ -177,13 +238,15 @@
                 const avatar = document.createElement('div');
                 avatar.className = 'dog-avatar';
                 messageDiv.appendChild(avatar);
+                
+                const text = document.createElement('span');
+                text.textContent = message;
+                messageDiv.appendChild(text);
+            } else {
+                messageDiv.textContent = message;
             }
-            
-            const text = document.createElement('span');
-            text.textContent = message;
-            messageDiv.appendChild(text);
 
-            testchat = testchat + text.textContent;
+            testchat = testchat + message;
             
             chatContainer.appendChild(messageDiv);
             chatContainer.scrollTop = chatContainer.scrollHeight;
@@ -220,6 +283,7 @@
             } catch (error) {
                 loading.style.display = 'none';
                 addMessage('Mi dispiace, c\'è stato un errore nella comunicazione. Riprova più tardi! 🐾');
+                console.error('Errore:', error);
             }
         }
 
@@ -229,6 +293,13 @@
                 sendMessage();
             }
         });
+
+        // Metti il focus sull'input all'apertura della pagina
+        window.onload = function() {
+            setTimeout(() => {
+                userInput.focus();
+            }, 500);
+        };
     </script>
 </body>
 </html>
