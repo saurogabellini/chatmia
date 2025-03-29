@@ -17,6 +17,8 @@ from langchain.prompts import PromptTemplate
 # --- Configurazione Iniziale ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+# per eseguire app uvicorn main:app --reload
+
 # Carica variabili d'ambiente (API Key)
 load_dotenv()
 
