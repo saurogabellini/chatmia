@@ -28,7 +28,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 load_dotenv()
 
 # Prendi l'API key da Railway o dal file .env
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY") or os.getenv("GOOGLE_API_KEY")
 if not GOOGLE_API_KEY:
     logging.error("GOOGLE_API_KEY non trovata nelle variabili d'ambiente.")
     raise ValueError("GOOGLE_API_KEY non configurata. Configurala su Railway o nel file .env")
