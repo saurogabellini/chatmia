@@ -1,33 +1,52 @@
-# Ambiente virtuale
-venv/
-env/
-rag_env/
-
-# File di sistema
-.DS_Store
-Thumbs.db
-
-# File di ambiente
-.env
-
-# File di cache Python
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
-
-# File di distribuzione
-dist/
+*.so
+.Python
+env/
 build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
 *.egg-info/
+.installed.cfg
+*.egg
 
-# File di log
+# Virtual Environment
+venv/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment variables
+.env
+
+# Logs
 *.log
+
+# Local development
+.DS_Store
+
+# File di sistema
+Thumbs.db
+
+# File di ambiente
+rag_env/
 
 # File FAISS
 faiss_index_gemini/
-
-# File IDE
-.vscode/
-.idea/
 
 # NOTA: I PDF nella cartella documenti_pdf sono inclusi nel repository

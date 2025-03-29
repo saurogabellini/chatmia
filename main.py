@@ -27,13 +27,11 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # Carica variabili d'ambiente (API Key)
 load_dotenv()
 
-# Prendi l'API key da Render o dal file .env
+# Prendi l'API key da Railway o dal file .env
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-PDF_FOLDER_PATH = "./documenti_pdf"  # Assicurati che questa cartella esista e contenga i tuoi PDF
-
 if not GOOGLE_API_KEY:
     logging.error("GOOGLE_API_KEY non trovata nelle variabili d'ambiente.")
-    exit(1)
+    raise ValueError("GOOGLE_API_KEY non configurata. Configurala su Railway o nel file .env")
 
 # Configura l'API di Google Gemini
 genai.configure(api_key=GOOGLE_API_KEY)
@@ -48,6 +46,9 @@ GENERATION_MODEL_NAME = "gemini-1.5-flash-latest"
 # --- Variabili Globali (saranno inizializzate all'avvio) ---
 vector_store = None
 qa_chain = None
+
+# Percorso della cartella PDF (configurabile tramite variabile d'ambiente)
+PDF_FOLDER_PATH = os.getenv("PDF_FOLDER_PATH", "./documenti_pdf")
 
 def download_pdf(url):
     """Scarica il PDF dall'URL e lo salva in un file temporaneo"""
@@ -147,7 +148,7 @@ def setup_rag_pipeline():
     logging.info(f"Inizializzazione modello generativo: {GENERATION_MODEL_NAME}")
     try:
         llm = ChatGoogleGenerativeAI(model=GENERATION_MODEL_NAME,
-                                 temperature=0.5, # Rendi la risposta più deterministica/basata sui fatti
+                                 temperature=0.4, # Rendi la risposta più deterministica/basata sui fatti
                                  convert_system_message_to_human=True) # Alcuni modelli lo richiedono
     except Exception as e:
          logging.error(f"Errore durante l'inizializzazione del modello generativo '{GENERATION_MODEL_NAME}': {e}")
@@ -160,7 +161,7 @@ def setup_rag_pipeline():
 
     # Definiamo un prompt template per guidare l'LLM
     prompt_template = """Usa le seguenti informazioni di contesto per rispondere alla domanda alla fine.
-      Ricorda che sei un cane e quindi rispondi in maniera divertente. Nel prompt ti sarà inviato anche la chat fino ad adesso usala per rispondere. 
+      Ricorda che sei un cane e quindi rispondi in maniera divertente ma coincisa. Nel prompt ti sarà inviato anche la chat fino ad adesso usala per rispondere. 
 
 Contesto:
 {context}
