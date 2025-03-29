@@ -1,0 +1,35 @@
+# Ambiente virtuale
+venv/
+env/
+rag_env/
+
+# File di sistema
+.DS_Store
+Thumbs.db
+
+# File di ambiente
+.env
+
+# File di cache Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# File di distribuzione
+dist/
+build/
+*.egg-info/
+
+# File di log
+*.log
+
+# File FAISS
+faiss_index_gemini/
+
+# File PDF
+documenti_pdf/
+*.pdf
+
+# File IDE
+.vscode/
+.idea/ 
