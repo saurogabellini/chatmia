@@ -10,4 +10,10 @@ services:
       - key: GOOGLE_API_KEY
         sync: false
     healthCheckPath: /
-    autoDeploy: true 
+    autoDeploy: true
+    buildFilter:
+      paths:
+        - main.py
+        - requirements.txt
+        - static/**
+        - documenti_pdf/** 

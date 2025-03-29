@@ -139,7 +139,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1><img src="mia.png" alt="Cagnolina Mia" style="width: 50px; height: 80px;">ChatBot con la cagnolina Mia<img src="mia.png" alt="Cagnolina Mia" style="width: 50px; height: 80px;"></h1>
+            <h1><img src="/static/mia.png" alt="Cagnolina Mia" style="width: 50px; height: 80px;">ChatBot con la cagnolina Mia<img src="/static/mia.png" alt="Cagnolina Mia" style="width: 50px; height: 80px;"></h1>
             <p>Fammi una domanda e ti risponderò da cane!</p>
         </div>
         
@@ -192,7 +192,6 @@
             const message = userInput.value.trim();
             if (!message) return;
 
-                        
             // Aggiungi il messaggio dell'utente
             addMessage(message, true);
             userInput.value = '';

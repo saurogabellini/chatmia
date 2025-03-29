@@ -5,7 +5,7 @@ import google.generativeai as genai
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from uvicorn import run
 import requests
 import tempfile
@@ -275,9 +275,23 @@ async def ask_question(
         raise HTTPException(status_code=500, detail=f"Errore interno del server durante l'elaborazione della richiesta: {e}")
 
 
-@app.get("/", include_in_schema=False)
+@app.get("/", response_class=HTMLResponse)
 async def root():
-    return FileResponse("static/index.html")
+    try:
+        return FileResponse("static/index.html")
+    except Exception as e:
+        logging.error(f"Errore nel caricamento di index.html: {e}")
+        return HTMLResponse("""
+            <html>
+                <head>
+                    <title>Errore</title>
+                </head>
+                <body>
+                    <h1>Errore nel caricamento della pagina</h1>
+                    <p>Si è verificato un errore nel caricamento della pagina. Riprova più tardi.</p>
+                </body>
+            </html>
+        """, status_code=500)
 
 
 # --- Esecuzione dell'Applicazione ---
