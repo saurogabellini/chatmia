@@ -5,6 +5,9 @@ import google.generativeai as genai
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from uvicorn import run
+import requests
+import tempfile
+from io import BytesIO
 
 # Importa componenti LangChain
 from langchain_community.document_loaders import PyPDFDirectoryLoader
@@ -24,6 +27,8 @@ load_dotenv()
 
 # Prendi l'API key da Render o dal file .env
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+PDF_FOLDER_PATH = "./documenti_pdf"  # Assicurati che questa cartella esista e contenga i tuoi PDF
+
 if not GOOGLE_API_KEY:
     logging.error("GOOGLE_API_KEY non trovata nelle variabili d'ambiente.")
     exit(1)
@@ -32,16 +37,30 @@ if not GOOGLE_API_KEY:
 genai.configure(api_key=GOOGLE_API_KEY)
 
 # --- Costanti Configurabili ---
-PDF_FOLDER_PATH = "./documenti_pdf"  # Assicurati che questa cartella esista e contenga i tuoi PDF
-CHUNK_SIZE = 1000  # Dimensione dei blocchi di testo
-CHUNK_OVERLAP = 100   # Sovrapposizione tra blocchi per mantenere il contesto
-FAISS_INDEX_PATH = "faiss_index_gemini" # Nome della cartella dove salvare/caricare l'indice FAISS
-EMBEDDING_MODEL_NAME = "models/text-embedding-004" # Modello di embedding consigliato
-GENERATION_MODEL_NAME = "gemini-1.5-flash-latest" # o "gemini-pro" o un altro modello generativo
+CHUNK_SIZE = 1000
+CHUNK_OVERLAP = 100
+FAISS_INDEX_PATH = "faiss_index_gemini"
+EMBEDDING_MODEL_NAME = "models/text-embedding-004"
+GENERATION_MODEL_NAME = "gemini-1.5-flash-latest"
 
 # --- Variabili Globali (saranno inizializzate all'avvio) ---
 vector_store = None
 qa_chain = None
+
+def download_pdf(url):
+    """Scarica il PDF dall'URL e lo salva in un file temporaneo"""
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        
+        # Crea un file temporaneo
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf')
+        temp_file.write(response.content)
+        temp_file.close()
+        return temp_file.name
+    except Exception as e:
+        logging.error(f"Errore durante il download del PDF: {e}")
+        raise
 
 # --- Funzioni di Setup ---
 
@@ -58,11 +77,7 @@ def setup_rag_pipeline():
     if not os.path.exists(PDF_FOLDER_PATH):
          logging.error(f"La cartella specificata per i PDF non esiste: {PDF_FOLDER_PATH}")
          logging.error("Assicurati di creare la cartella e metterci dentro i file PDF.")
-         # Potresti voler creare la cartella qui: os.makedirs(PDF_FOLDER_PATH, exist_ok=True)
-         # Ma è meglio che l'utente la prepari consapevolmente.
-         # Decidiamo di non avviare il server se la cartella non c'è.
          raise FileNotFoundError(f"Cartella PDF non trovata: {PDF_FOLDER_PATH}")
-
 
     logging.info(f"Caricamento PDF dalla cartella: {PDF_FOLDER_PATH}")
     loader = PyPDFDirectoryLoader(PDF_FOLDER_PATH)
@@ -70,13 +85,11 @@ def setup_rag_pipeline():
         documents = loader.load()
         if not documents:
             logging.warning(f"Nessun documento PDF trovato o caricato da {PDF_FOLDER_PATH}. La RAG non avrà contesto.")
-            # Decidiamo di continuare ma con un avviso, potrebbe essere intenzionale non avere documenti all'inizio
         else:
              logging.info(f"Caricati {len(documents)} documenti PDF.")
 
     except Exception as e:
         logging.error(f"Errore durante il caricamento dei PDF: {e}")
-        # Potresti voler terminare l'avvio qui se i PDF sono essenziali
         raise
 
     # Se non ci sono documenti, non possiamo creare embeddings o vector store
@@ -87,7 +100,6 @@ def setup_rag_pipeline():
          # Questo blocco previene errori se la cartella è vuota.
          return # Interrompiamo il setup se non ci sono documenti
 
-
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=CHUNK_SIZE,
         chunk_overlap=CHUNK_OVERLAP
@@ -96,7 +108,7 @@ def setup_rag_pipeline():
     logging.info(f"Documenti divisi in {len(texts)} blocchi di testo.")
 
     if not texts:
-        logging.warning("Nessun blocco di testo generato dopo lo splitting. Controlla i PDF.")
+        logging.warning("Nessun blocco di testo generato dopo lo splitting. Controlla il PDF.")
         return # Interrompiamo se lo splitting non produce nulla
 
     # 2. Creazione Embeddings e Vector Store (FAISS)
@@ -194,7 +206,7 @@ async def startup_event():
     try:
         setup_rag_pipeline()
     except FileNotFoundError as e:
-         logging.error(f"Errore critico durante l'avvio: {e}. Il server non può funzionare senza la cartella PDF.")
+         logging.error(f"Errore critico durante l'avvio: {e}. Il server non può funzionare senza il PDF.")
          # In un'applicazione reale, potresti voler uscire o impedire l'avvio completo.
          # FastAPI potrebbe avviarsi ma l'endpoint /chiedi fallirà.
     except Exception as e:

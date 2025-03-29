@@ -32,4 +32,6 @@ documenti_pdf/
 
 # File IDE
 .vscode/
-.idea/ 
+.idea/
+
+# NOTA: I PDF nella cartella documenti_pdf sono inclusi nel repository 
