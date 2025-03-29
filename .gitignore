@@ -26,12 +26,8 @@ build/
 # File FAISS
 faiss_index_gemini/
 
-# File PDF
-documenti_pdf/
-*.pdf
-
 # File IDE
 .vscode/
 .idea/
 
-# NOTA: I PDF nella cartella documenti_pdf sono inclusi nel repository 
+# NOTA: I PDF nella cartella documenti_pdf sono inclusi nel repository
