@@ -200,7 +200,7 @@
             loading.style.display = 'block';             
 
             try {
-                const response = await fetch(`/chiedi?domanda=${encodeURIComponent(message)}`, {
+                const response = await fetch(`/chiedi?domanda=${encodeURIComponent(testchat +message)}`, {
                     method: 'GET',
                     mode: 'cors',
                     headers: {
