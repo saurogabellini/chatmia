@@ -9,4 +9,5 @@ faiss-cpu>=1.7.4
 pypdf>=4.0.1
 python-multipart>=0.0.9
 pydantic>=2.11.1
-starlette>=0.36.3 
+starlette>=0.36.3
+python-jose>=3.3.0 

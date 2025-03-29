@@ -228,7 +228,23 @@
         const chatContainer = document.getElementById('chatContainer');
         const userInput = document.getElementById('userInput');
         const loading = document.getElementById('loading');
-        var testchat ="";
+        let sessionId = getCookie('session_id') || null;
+        
+        // Funzione per ottenere un cookie
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+            return null;
+        }
+        
+        // Funzione per impostare un cookie
+        function setCookie(name, value, days = 7) {
+            const date = new Date();
+            date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+            const expires = `; expires=${date.toUTCString()}`;
+            document.cookie = `${name}=${value}${expires}; path=/`;
+        }
 
         function addMessage(message, isUser = false) {
             const messageDiv = document.createElement('div');
@@ -245,8 +261,6 @@
             } else {
                 messageDiv.textContent = message;
             }
-
-            testchat = testchat + message;
             
             chatContainer.appendChild(messageDiv);
             chatContainer.scrollTop = chatContainer.scrollHeight;
@@ -264,19 +278,33 @@
             loading.style.display = 'block';             
 
             try {
-                const response = await fetch(`/chiedi?domanda=${encodeURIComponent(testchat +message)}`, {
+                let url = `/chiedi?domanda=${encodeURIComponent(message)}`;
+                
+                // Aggiungi l'ID di sessione all'URL se disponibile (è comunque nei cookie)
+                if (sessionId) {
+                    url += `&session_id=${encodeURIComponent(sessionId)}`;
+                }
+                
+                const response = await fetch(url, {
                     method: 'GET',
                     mode: 'cors',
                     headers: {
                         'Accept': 'application/json',
                         'Content-Type': 'application/json'
                     },
-                    credentials: 'omit'
+                    credentials: 'include' // Importante: include invia i cookie con la richiesta
                 });
+                
                 const data = await response.json();
                 
                 // Nascondi il loading
                 loading.style.display = 'none';
+                
+                // Salva l'ID di sessione se ricevuto dal server
+                if (data.session_id) {
+                    sessionId = data.session_id;
+                    setCookie('session_id', sessionId);
+                }
 
                 // Aggiungi la risposta del bot
                 addMessage(data.risposta);

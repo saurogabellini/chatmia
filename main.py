@@ -2,7 +2,7 @@ import os
 import logging
 from dotenv import load_dotenv
 import google.generativeai as genai
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Cookie, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, HTMLResponse
@@ -10,6 +10,9 @@ from uvicorn import run
 import requests
 import tempfile
 from io import BytesIO
+import uuid
+from typing import Dict, List, Optional
+import time
 
 # Importa componenti LangChain
 from langchain_community.document_loaders import PyPDFDirectoryLoader
@@ -46,6 +49,11 @@ GENERATION_MODEL_NAME = "gemini-1.5-flash-latest"
 # --- Variabili Globali (saranno inizializzate all'avvio) ---
 vector_store = None
 qa_chain = None
+
+# Gestione delle sessioni di conversazione
+conversation_history: Dict[str, List[Dict[str, str]]] = {}
+# Tempo di scadenza delle sessioni in secondi (3 ore)
+SESSION_EXPIRY = 10800 
 
 # Percorso della cartella PDF (configurabile tramite variabile d'ambiente)
 PDF_FOLDER_PATH = os.getenv("PDF_FOLDER_PATH", "./documenti_pdf")
@@ -184,7 +192,6 @@ Risposta utile:"""
 
     logging.info("Pipeline RAG configurata con successo.")
 
-
 # --- Applicazione FastAPI ---
 app = FastAPI(
     title="API RAG con Gemini e PDF",
@@ -219,17 +226,84 @@ async def startup_event():
          logging.error(f"Errore imprevisto durante il setup della pipeline RAG: {e}")
          # Gestisci altri errori critici qui se necessario
 
+# --- Funzioni di utilità per la gestione delle conversazioni ---
+def get_or_create_session(session_id: Optional[str] = None) -> str:
+    """
+    Ottiene una sessione esistente o ne crea una nuova se necessario
+    """
+    if not session_id or session_id not in conversation_history:
+        # Crea una nuova sessione
+        new_session_id = str(uuid.uuid4())
+        conversation_history[new_session_id] = [
+            {"role": "assistant", "content": "Ciao! Sono Mia! Come posso aiutarti oggi? 🐾"}
+        ]
+        return new_session_id
+    return session_id
+
+def get_conversation_history(session_id: str) -> List[Dict[str, str]]:
+    """
+    Recupera la cronologia della conversazione per una sessione
+    """
+    # Pulisci le sessioni scadute
+    cleanup_expired_sessions()
+    
+    # Restituisci la cronologia della sessione o una lista vuota se non esiste
+    return conversation_history.get(session_id, [])
+
+def add_to_conversation(session_id: str, role: str, content: str):
+    """
+    Aggiunge un messaggio alla cronologia della conversazione
+    """
+    if session_id not in conversation_history:
+        conversation_history[session_id] = []
+    
+    # Aggiungi timestamp per la gestione della scadenza
+    conversation_history[session_id].append({
+        "role": role, 
+        "content": content,
+        "timestamp": time.time()
+    })
+
+def cleanup_expired_sessions():
+    """
+    Rimuove le sessioni scadute dalla memoria
+    """
+    current_time = time.time()
+    expired_sessions = []
+    
+    for session_id, messages in conversation_history.items():
+        if messages and "timestamp" in messages[-1]:
+            last_activity = messages[-1]["timestamp"]
+            if current_time - last_activity > SESSION_EXPIRY:
+                expired_sessions.append(session_id)
+    
+    for session_id in expired_sessions:
+        del conversation_history[session_id]
+        logging.info(f"Sessione scaduta rimossa: {session_id}")
+
+def format_conversation_for_prompt(messages: List[Dict[str, str]]) -> str:
+    """
+    Formatta la cronologia della conversazione in un formato adatto al prompt
+    """
+    formatted = ""
+    for msg in messages:
+        if "role" in msg and "content" in msg:
+            role = "Mia" if msg["role"] == "assistant" else "Utente"
+            formatted += f"{role}: {msg['content']}\n"
+    return formatted
 
 @app.get("/chiedi", tags=["RAG"])
 async def ask_question(
     domanda: str = Query(..., # Rendi il parametro obbligatorio
                          min_length=3,
                          description="La domanda da porre ai documenti PDF."
-                         )
+                         ),
+    session_id: Optional[str] = Cookie(None)
     ):
     """
     Endpoint per porre una domanda.
     Recupera contesto dai PDF indicizzati e genera una risposta usando Gemini.
+    Mantiene la cronologia della conversazione per sessione.
     """
     if qa_chain is None:
         logging.error("La catena QA non è stata inizializzata correttamente (forse mancano i PDF o c'è stato un errore all'avvio).")
@@ -238,12 +312,25 @@ async def ask_question(
     if not domanda:
         raise HTTPException(status_code=400, detail="Il parametro 'domanda' non può essere vuoto.")
 
-    logging.info(f"Ricevuta domanda: '{domanda}'")
+    # Gestione della sessione
+    session_id = get_or_create_session(session_id)
+    
+    # Aggiungi la domanda dell'utente alla cronologia
+    add_to_conversation(session_id, "user", domanda)
+    
+    # Ottieni la cronologia completa formattata
+    conversation_context = format_conversation_for_prompt(get_conversation_history(session_id))
+    
+    logging.info(f"Ricevuta domanda: '{domanda}' (Sessione: {session_id})")
+    logging.debug(f"Contesto conversazione: {conversation_context}")
 
     try:
         logging.info("Esecuzione della catena QA...")
+        # Includiamo la conversazione nel contesto della domanda
+        full_query = f"Conversazione precedente:\n{conversation_context}\n\nDomanda attuale: {domanda}"
+        
         # Usiamo invoke invece di run per avere più controllo e accesso ai source_documents
-        result = qa_chain.invoke({"query": domanda})
+        result = qa_chain.invoke({"query": full_query})
 
         answer = result.get('result', "Non è stato possibile generare una risposta.")
         source_documents = result.get('source_documents', [])
@@ -251,30 +338,28 @@ async def ask_question(
         logging.info(f"Risposta generata: '{answer}'")
         if source_documents:
              logging.info(f"Basata su {len(source_documents)} documenti sorgente recuperati.")
-             # Puoi loggare i metadati dei documenti sorgente se necessario:
-             # for doc in source_documents:
-             #    logging.debug(f" - Source: {doc.metadata.get('source', 'N/A')}, Page: {doc.metadata.get('page', 'N/A')}")
 
+        # Aggiungi la risposta alla cronologia
+        add_to_conversation(session_id, "assistant", answer)
 
-        # Restituiamo la risposta e opzionalmente i riferimenti
+        # Restituiamo la risposta, i riferimenti e l'ID di sessione
         response_data = {
             "domanda": domanda,
             "risposta": answer,
+            "session_id": session_id,
             # Opzionale: includi riferimenti ai documenti sorgente
             "riferimenti": [
                 {
                     "sorgente": doc.metadata.get('source', 'N/A'),
                     "pagina": doc.metadata.get('page', 'N/A'),
-                    # "contenuto_chunk": doc.page_content # Potrebbe essere molto lungo
                 } for doc in source_documents
             ] if source_documents else []
         }
         return response_data
 
     except Exception as e:
-        logging.error(f"Errore durante l'elaborazione della domanda '{domanda}': {e}", exc_info=True) # Aggiungi traceback ai log
+        logging.error(f"Errore durante l'elaborazione della domanda '{domanda}': {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Errore interno del server durante l'elaborazione della richiesta: {e}")
-
 
 @app.get("/", response_class=HTMLResponse)
 async def root():
@@ -294,6 +379,38 @@ async def root():
             </html>
         """, status_code=500)
 
+@app.get("/admin/sessions", tags=["Admin"])
+async def get_sessions_info():
+    """
+    Endpoint amministrativo per visualizzare le statistiche delle sessioni e pulire quelle scadute.
+    Nota: In un ambiente di produzione, questo dovrebbe essere protetto da autenticazione.
+    """
+    # Pulizia delle sessioni scadute
+    cleanup_expired_sessions()
+    
+    # Calcola statistiche
+    total_sessions = len(conversation_history)
+    sessions_info = []
+    
+    for session_id, messages in conversation_history.items():
+        last_activity = time.time()
+        message_count = len(messages)
+        
+        if messages and "timestamp" in messages[-1]:
+            last_activity = messages[-1]["timestamp"]
+            
+        sessions_info.append({
+            "session_id": session_id[:8] + "...",  # Solo una parte dell'ID per privacy
+            "messages": message_count,
+            "last_activity_seconds_ago": int(time.time() - last_activity),
+            "expires_in_seconds": int(SESSION_EXPIRY - (time.time() - last_activity))
+        })
+    
+    return {
+        "total_active_sessions": total_sessions,
+        "session_expiry_seconds": SESSION_EXPIRY,
+        "sessions": sessions_info
+    }
 
 # --- Esecuzione dell'Applicazione ---
 if __name__ == "__main__":
