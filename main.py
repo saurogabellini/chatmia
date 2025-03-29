@@ -4,6 +4,8 @@ from dotenv import load_dotenv
 import google.generativeai as genai
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from uvicorn import run
 import requests
 import tempfile
@@ -198,6 +200,9 @@ app.add_middleware(
     allow_headers=["*"],  # Permette tutti gli headers
 )
 
+# Monta la cartella static per servire i file statici
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
 @app.on_event("startup")
 async def startup_event():
     """
@@ -272,7 +277,7 @@ async def ask_question(
 
 @app.get("/", include_in_schema=False)
 async def root():
-    return {"message": "Benvenuto nell'API RAG. Usa l'endpoint /docs per la documentazione interattiva o /chiedi?domanda=... per fare una domanda."}
+    return FileResponse("static/index.html")
 
 
 # --- Esecuzione dell'Applicazione ---
